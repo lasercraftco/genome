@@ -13,19 +13,11 @@ function base(): string {
   return typeof window === "undefined" ? `${BASE_SERVER}/api` : BASE_BROWSER;
 }
 
+// User headers are injected by Next.js middleware on the /api/engine/* edge
+// (see middleware.ts). Keeping engine.ts auth-free lets Client Components
+// import it without dragging next/headers into the browser bundle.
 async function userHeaders(): Promise<Record<string, string>> {
-  if (typeof window !== "undefined") return {};
-  // Dynamic import keeps this engine module usable from Client Components.
-  // Static `import { getUser } from "@/lib/auth/session"` pulls `next/headers`
-  // into the client bundle which Next refuses to compile.
-  const { getUser } = await import("@/lib/auth/session");
-  const u = await getUser();
-  if (!u) return {};
-  return {
-    "X-Genome-User-Id": u.id,
-    "X-Genome-User-Role": u.role,
-    "X-Genome-User-Email": u.email,
-  };
+  return {};
 }
 
 async function request<T>(
