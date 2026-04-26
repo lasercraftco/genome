@@ -6,8 +6,6 @@
  * engine can scope queries per-user.
  */
 
-import { getUser } from "@/lib/auth/session";
-
 const BASE_SERVER = process.env.GENOME_ENGINE_URL ?? "http://localhost:8001";
 const BASE_BROWSER = "/api/engine";
 
@@ -17,6 +15,10 @@ function base(): string {
 
 async function userHeaders(): Promise<Record<string, string>> {
   if (typeof window !== "undefined") return {};
+  // Dynamic import keeps this engine module usable from Client Components.
+  // Static `import { getUser } from "@/lib/auth/session"` pulls `next/headers`
+  // into the client bundle which Next refuses to compile.
+  const { getUser } = await import("@/lib/auth/session");
   const u = await getUser();
   if (!u) return {};
   return {
