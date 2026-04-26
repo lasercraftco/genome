@@ -2,11 +2,9 @@ FROM python:3.12-slim AS base
 
 # yt-dlp + ffmpeg (for audio metadata probing) + curl/wget for healthchecks
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ffmpeg \
         curl \
         wget \
         ca-certificates \
-        build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

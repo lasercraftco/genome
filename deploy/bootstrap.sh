@@ -13,6 +13,13 @@
 # ingress added on infra over SSH).
 set -euo pipefail
 
+# Ensure docker is on PATH and the daemon socket is reachable when this script
+# is run via SSH (Docker Desktop doesn't inject these into non-interactive shells).
+export PATH="/usr/local/bin:/opt/homebrew/bin:/Applications/Docker.app/Contents/Resources/bin:${PATH:-/usr/bin:/bin}"
+if [ -S "$HOME/.docker/run/docker.sock" ] && [ -z "${DOCKER_HOST:-}" ]; then
+  export DOCKER_HOST="unix://$HOME/.docker/run/docker.sock"
+fi
+
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 HOMELAB_ENV="$HOME/homelab/.env"
 TARGET_DIR="$HOME/homelab/genome"
@@ -26,16 +33,38 @@ die()  { printf "  \033[31m✗\033[0m %s\n" "$1" >&2; exit 1; }
 bold "1. Verify environment"
 [ -f "$HOMELAB_ENV" ] || die "missing $HOMELAB_ENV — this script expects to run on the iMac"
 command -v docker >/dev/null || die "docker not on PATH (Docker Desktop should be running)"
-docker info >/dev/null 2>&1 || die "docker daemon not reachable"
+docker ps >/dev/null 2>&1 || die "docker daemon not reachable (ps failed)"
 ok "docker ok ($(docker --version))"
 
-# Pull required values out of ~/homelab/.env
-# shellcheck disable=SC1090
-set -a; source "$HOMELAB_ENV"; set +a
-: "${LIDARR_KEY:?LIDARR_KEY missing in ~/homelab/.env}"
-: "${LASTFM_API_KEY:?LASTFM_API_KEY missing in ~/homelab/.env}"
-: "${SPOTIPY_CLIENT_ID:?SPOTIPY_CLIENT_ID missing in ~/homelab/.env}"
-: "${LISTENBRAINZ_TOKEN:?LISTENBRAINZ_TOKEN missing in ~/homelab/.env}"
+# Pull required values out of ~/homelab/.env using a tolerant key=value parser
+# (the file has unquoted paths with spaces that break `source`).
+read_env_key() {
+  local key="$1"
+  # take the part after the first =, strip optional surrounding quotes
+  local v
+  v="$(grep -E "^${key}=" "$HOMELAB_ENV" | head -1 | sed -E "s/^${key}=//" | sed -E 's/^"//; s/"$//; s/^'"'"'//; s/'"'"'$//')"
+  printf %s "$v"
+}
+
+LIDARR_KEY="$(read_env_key LIDARR_KEY)"
+LASTFM_API_KEY="$(read_env_key LASTFM_API_KEY)"
+LASTFM_API_SECRET="$(read_env_key LASTFM_API_SECRET)"
+LISTENBRAINZ_USER="$(read_env_key LISTENBRAINZ_USER)"
+LISTENBRAINZ_TOKEN="$(read_env_key LISTENBRAINZ_TOKEN)"
+SPOTIPY_CLIENT_ID="$(read_env_key SPOTIPY_CLIENT_ID)"
+SPOTIPY_CLIENT_SECRET="$(read_env_key SPOTIPY_CLIENT_SECRET)"
+CF_API_TOKEN="$(read_env_key CF_API_TOKEN)"
+CF_ZONE_ID="$(read_env_key CF_ZONE_ID)"
+CF_TUNNEL_ID="$(read_env_key CF_TUNNEL_ID)"
+PLEX_TOKEN="$(read_env_key PLEX_TOKEN)"
+POSTGRES_PASSWORD="$(read_env_key POSTGRES_PASSWORD)"
+export LIDARR_KEY LASTFM_API_KEY LASTFM_API_SECRET LISTENBRAINZ_USER LISTENBRAINZ_TOKEN
+export SPOTIPY_CLIENT_ID SPOTIPY_CLIENT_SECRET CF_API_TOKEN CF_ZONE_ID CF_TUNNEL_ID PLEX_TOKEN POSTGRES_PASSWORD
+
+[ -n "$LIDARR_KEY" ]        || die "LIDARR_KEY missing in ~/homelab/.env"
+[ -n "$LASTFM_API_KEY" ]    || die "LASTFM_API_KEY missing in ~/homelab/.env"
+[ -n "$SPOTIPY_CLIENT_ID" ] || die "SPOTIPY_CLIENT_ID missing in ~/homelab/.env"
+[ -n "$LISTENBRAINZ_TOKEN" ] || die "LISTENBRAINZ_TOKEN missing in ~/homelab/.env"
 ok "secrets present in ~/homelab/.env"
 
 bold "2. Stage code under ~/homelab/genome"
@@ -77,9 +106,21 @@ rm -f .env.bak
 chmod 600 .env
 ok "wrote .env (chmod 600)"
 
-bold "4. Pull / build images"
-docker compose -f deploy/docker-compose.yml --env-file .env pull || true
-ok "images pulled (or will build on up)"
+bold "4. Build / pull images"
+# Try GHCR first; fall back to local build if the images aren't pushed yet.
+NEED_BUILD=0
+docker compose -f deploy/docker-compose.yml --env-file .env pull 2>&1 | tee /tmp/genome_pull.log || NEED_BUILD=1
+if grep -qE "manifest unknown|not found|denied|pull access denied" /tmp/genome_pull.log; then
+  NEED_BUILD=1
+fi
+if [ "$NEED_BUILD" = "1" ]; then
+  warn "GHCR images unavailable — building locally"
+  docker build -t ghcr.io/lasercraftco/genome-engine:latest ./genome-engine
+  docker build -t ghcr.io/lasercraftco/genome-web:latest    ./genome-web
+  ok "built local images"
+else
+  ok "pulled images from GHCR"
+fi
 
 bold "5. Boot the stack"
 docker compose -f deploy/docker-compose.yml --env-file .env up -d --remove-orphans
