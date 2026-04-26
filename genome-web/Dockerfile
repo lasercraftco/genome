@@ -1,17 +1,21 @@
 # syntax=docker/dockerfile:1.7
-ARG NODE_VERSION=22.13.0
+ARG NODE_VERSION=22.20.0
 
 # ---- deps ----
 FROM node:${NODE_VERSION}-alpine AS deps
 WORKDIR /app
-RUN corepack enable
+# Newer pnpm releases ship signatures whose keys aren't bundled in older
+# Corepack snapshots, breaking the build whenever a pnpm release rotates keys.
+ENV COREPACK_INTEGRITY_KEYS=0
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 COPY package.json pnpm-lock.yaml* ./
 RUN if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install; fi
 
 # ---- dev (used by docker-compose.dev.yml) ----
 FROM node:${NODE_VERSION}-alpine AS dev
 WORKDIR /app
-RUN corepack enable
+ENV COREPACK_INTEGRITY_KEYS=0
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NODE_ENV=development HOSTNAME=0.0.0.0
@@ -21,7 +25,8 @@ CMD ["pnpm", "dev", "-p", "3000"]
 # ---- builder ----
 FROM node:${NODE_VERSION}-alpine AS builder
 WORKDIR /app
-RUN corepack enable
+ENV COREPACK_INTEGRITY_KEYS=0
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -30,8 +35,8 @@ RUN pnpm build
 # ---- runner ----
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
-RUN corepack enable
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 COREPACK_INTEGRITY_KEYS=0
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
