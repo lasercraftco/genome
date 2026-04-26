@@ -1,0 +1,30 @@
+# Local development overrides — `docker compose -f docker-compose.yml -f docker-compose.dev.yml up`
+# Builds images from source rather than pulling from ghcr.io.
+
+services:
+  engine:
+    image: genome-engine:dev
+    build:
+      context: ../genome-engine
+      dockerfile: Dockerfile
+    volumes:
+      - ../genome-engine/app:/app/app
+    environment:
+      LOG_LEVEL: debug
+      RELOAD: "true"
+
+  web:
+    image: genome-web:dev
+    build:
+      context: ../genome-web
+      dockerfile: Dockerfile
+      target: dev
+    volumes:
+      - ../genome-web:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      NODE_ENV: development
+
+  ytdlp-updater:
+    profiles: ["disabled"]   # don't run the daily updater in dev

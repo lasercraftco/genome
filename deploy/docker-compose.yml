@@ -1,0 +1,100 @@
+# Genome — production stack on iMac (192.168.1.92)
+#
+# - Reuses the existing iMac Postgres via host.docker.internal where possible.
+#   For first-time install, ships its own Postgres container so it's isolated.
+# - Watchtower (already running on iMac) auto-updates these images by label.
+# - Cloudflare tunnel ingress rule routes genome.tyflix.net → host:3032.
+
+name: genome
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: genome-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - genome_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Bind to loopback only — only the engine needs it.
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  engine:
+    image: ghcr.io/lasercraftco/genome-engine:latest
+    container_name: genome-engine
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      LIDARR_URL: http://host.docker.internal:8686
+      PLAYLIST_DL_URL: http://host.docker.internal:8800
+      NAVIDROME_URL: http://host.docker.internal:4533
+      PLEX_URL: http://host.docker.internal:32400
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:8001:8001"
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8001/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web:
+    image: ghcr.io/lasercraftco/genome-web:latest
+    container_name: genome-web
+    restart: unless-stopped
+    depends_on:
+      engine:
+        condition: service_healthy
+    env_file: ../.env
+    environment:
+      HOSTNAME: "0.0.0.0"            # Next.js 16 IPv6-only gotcha (per Tyflix memory)
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      GENOME_ENGINE_URL: http://engine:8001
+      GENOME_ENGINE_PUBLIC_URL: /api/engine
+    ports:
+      - "3032:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Daily yt-dlp self-update (per build constraint: "yt-dlp will need keeping current").
+  ytdlp-updater:
+    image: ghcr.io/lasercraftco/genome-engine:latest
+    container_name: genome-ytdlp-updater
+    restart: unless-stopped
+    entrypoint: ["sh", "-c"]
+    command: |
+      "while true; do \
+        echo \"[$(date -Iseconds)] updating yt-dlp\"; \
+        pip install --upgrade --no-cache-dir yt-dlp || true; \
+        sleep 86400; \
+      done"
+    depends_on:
+      engine:
+        condition: service_healthy
+
+volumes:
+  genome_pg_data:
+    name: genome_pg_data

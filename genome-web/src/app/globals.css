@@ -1,0 +1,85 @@
+@import "tailwindcss";
+@import "./brand.css";
+
+@theme {
+  --color-bg: var(--brand-bg);
+  --color-bg-2: var(--brand-bg-2);
+  --color-surface: var(--brand-surface);
+  --color-surface-2: var(--brand-surface-2);
+  --color-text: var(--brand-text);
+  --color-text-dim: var(--brand-text-dim);
+  --color-text-faint: var(--brand-text-faint);
+  --color-primary: var(--brand-primary);
+  --color-primary-strong: var(--brand-primary-strong);
+  --color-accent: var(--brand-accent);
+  --color-up: var(--brand-up);
+  --color-down: var(--brand-down);
+  --color-warn: var(--brand-warn);
+  --radius: var(--brand-radius);
+  --radius-sm: var(--brand-radius-sm);
+  --radius-lg: var(--brand-radius-lg);
+  --font-display: var(--brand-font-display);
+  --font-sans: var(--brand-font);
+}
+
+html,
+body {
+  background: radial-gradient(circle at 50% -20%, rgba(168, 85, 247, 0.18), transparent 60%) var(--brand-bg);
+  color: var(--brand-text);
+  min-height: 100dvh;
+  font-family: var(--brand-font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(var(--brand-primary-glow), 0.35);
+  color: var(--brand-text);
+}
+
+/* Cinematic backdrop pulse for full-screen mode */
+@keyframes brand-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+
+.cinematic-art {
+  animation: brand-pulse 8s ease-in-out infinite;
+}
+
+/* Slick range slider styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  background: transparent;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--brand-primary);
+  border-radius: 50%;
+  margin-top: -5px;
+  box-shadow: 0 0 18px rgba(var(--brand-primary-glow), 0.6);
+}
+
+/* Smooth virtualized list scroll */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
