@@ -11,6 +11,17 @@ interface SignInPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+function asString(v: string | string[] | undefined): string | undefined {
+  if (Array.isArray(v)) return v[0];
+  return v;
+}
+
+const ERROR_COPY: Record<string, string> = {
+  invalid_email: "That doesn't look like a valid email. Try again.",
+  expired: "That link has expired. Request a fresh one below.",
+  used: "That link has already been used. Request a new one.",
+};
+
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const user = await getUser();
   if (user) {
@@ -18,8 +29,10 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   }
 
   const params = await searchParams;
-  const error = params.error as string | undefined;
-  const hasError = !!error;
+  const error = asString(params.error);
+  const sent = asString(params.sent) === "1";
+  const devLink = asString(params.devLink);
+  const errorMsg = error ? ERROR_COPY[error] ?? error : null;
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-4 py-8">
@@ -35,40 +48,65 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <CardDescription>{BRAND.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {hasError && (
+          {errorMsg && (
             <Badge variant="warn" className="w-full justify-center">
-              {error}
+              {errorMsg}
             </Badge>
           )}
 
-          <form action="/api/auth/request" method="POST" className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-text">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                name="email"
-                placeholder="your@email.com"
-                required
-                autoFocus
-                disabled={false}
-              />
+          {sent ? (
+            <div className="space-y-4">
+              <Badge variant="up" className="w-full justify-center">
+                Check your inbox for a magic link.
+              </Badge>
+              {devLink && (
+                <div className="space-y-2 text-xs text-text-dim">
+                  <p>Dev mode (no RESEND_API_KEY set on server) — use this link:</p>
+                  <a
+                    href={devLink}
+                    className="block break-all rounded-md border border-surface-2 bg-surface-2/50 p-2 font-mono text-text hover:bg-surface-2"
+                  >
+                    {devLink}
+                  </a>
+                </div>
+              )}
+              <a
+                href="/signin"
+                className="block text-center text-xs text-text-dim underline-offset-4 hover:underline"
+              >
+                Send another link
+              </a>
             </div>
+          ) : (
+            <form action="/api/auth/request" method="POST" className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium text-text">
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  name="email"
+                  placeholder="your@email.com"
+                  required
+                  autoFocus
+                  disabled={false}
+                />
+              </div>
 
-            <Button
-              type="submit"
-              className="w-full flex items-center justify-center gap-2"
-            >
-              <Mail className="h-4 w-4" />
-              Send magic link
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <Mail className="h-4 w-4" />
+                Send magic link
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </form>
+          )}
 
           <p className="text-xs text-text-dim text-center">
-            We'll send you a secure link to sign in. No password needed.
+            We&apos;ll send you a secure link to sign in. No password needed.
           </p>
         </CardContent>
       </Card>
