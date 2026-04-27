@@ -77,9 +77,10 @@ The `genome-ytdlp-updater` container runs daily and `pip install --upgrade yt-dl
 
 1. Tyler shares `https://genome.tyflix.net` with a friend.
 2. Friend signs in via email magic link → defaults to `friend` role.
-3. Tyler opens `/admin/users` → can promote to `trusted` (direct library writes), set quotas, ban.
-4. Friend's library adds default to `requested` status.
-5. Tyler reviews at `/admin/requests`; one-click Approve fires the Lidarr POST.
+3. Friend can add tracks to library immediately (no approval gate).
+4. Friends are rate-limited to 10 adds per day; owners/trusted have unlimited.
+5. Tyler can override per-friend quotas at `/admin/quotas`.
+6. All library activity (adds, status) is logged at `/admin/audit` for transparency.
 
 ## Rollback
 

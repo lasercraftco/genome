@@ -63,7 +63,7 @@ export function UserMenuContent({
         <DropdownMenuItem asChild>
           <a href="/library" className="cursor-pointer flex items-center gap-2">
             <Library className="h-4 w-4" />
-            <span>My Library Requests</span>
+            <span>My Library Activity</span>
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

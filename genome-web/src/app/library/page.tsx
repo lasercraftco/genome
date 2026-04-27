@@ -12,6 +12,7 @@ import { formatRelative } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 const STATUS_LABEL: Record<string, string> = {
+  auto_approved: "Approved · adding…",
   requested: "Requested · awaiting Tyler",
   pending: "Pending",
   adding: "Adding…",
@@ -27,6 +28,7 @@ const STATUS_VARIANT: Record<string, "up" | "down" | "warn" | "secondary" | "out
   failed: "down",
   downloading: "warn",
   adding: "warn",
+  auto_approved: "warn",
   requested: "outline",
   pending: "outline",
 };
@@ -105,8 +107,8 @@ export default async function LibraryPage() {
           <div>
             <p className="text-text">Wired into Tyler's existing stack:</p>
             <p>
-              Owner / trusted adds go straight to <a href="https://lidarr.tyflix.net" className="text-primary underline" target="_blank" rel="noreferrer">Lidarr</a>.
-              Friend adds become requests Tyler approves. Tracks land at <a href="https://music.tyflix.net" className="text-primary underline" target="_blank" rel="noreferrer">music.tyflix.net</a> (Navidrome) and <a href="https://plex.tyflix.net" className="text-primary underline" target="_blank" rel="noreferrer">Plex</a>.
+              All adds go straight to <a href="https://lidarr.tyflix.net" className="text-primary underline" target="_blank" rel="noreferrer">Lidarr</a> for download.
+              Friends are limited to 10 adds per day. Tracks land at <a href="https://music.tyflix.net" className="text-primary underline" target="_blank" rel="noreferrer">music.tyflix.net</a> (Navidrome) and <a href="https://plex.tyflix.net" className="text-primary underline" target="_blank" rel="noreferrer">Plex</a>.
             </p>
           </div>
         </div>

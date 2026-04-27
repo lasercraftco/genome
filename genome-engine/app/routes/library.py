@@ -1,7 +1,11 @@
-"""Library integration — user-scoped, role-aware.
+"""Library integration — user-scoped, auto-approve for all roles.
 
-Owner / trusted: direct add (status='adding' immediately, then downloading).
-Friend: row created with status='requested'; Tyler approves in /admin/requests.
+All users (owner / trusted / friend): direct add. Row created with
+status='auto_approved' and the background worker moves it through
+adding → downloading → in_library (or failed).
+
+Friends are rate-limited to ``users.daily_add_quota`` adds per 24h
+(default 10). Owner/trusted are unlimited.
 """
 
 from __future__ import annotations
@@ -36,7 +40,7 @@ async def add_to_library(
     if not track:
         raise HTTPException(404, "track not found")
 
-    # Quota for friends
+    # Quota for friends only (owner/trusted have unlimited)
     db_user = await session.get(User, user.id)
     if user.role == "friend" and db_user is not None:
         cutoff = datetime.now(timezone.utc) - timedelta(days=1)
@@ -47,21 +51,22 @@ async def add_to_library(
                 )
             )
         ).scalar_one()
-        if recent and recent >= db_user.daily_add_quota:
-            raise HTTPException(429, f"daily request quota reached ({db_user.daily_add_quota})")
+        # Use per-user quota or default 10/day for friends
+        quota = db_user.daily_add_quota if db_user.daily_add_quota else 10
+        if recent and recent >= quota:
+            raise HTTPException(429, f"daily add quota reached ({quota})")
 
-    direct = can_direct_add(user) or (db_user.auto_approve if db_user else False)
+    # All users go through direct add path now
     add = LibraryAdd(
         user_id=user.id,
         track_id=req.track_id,
-        status="adding" if direct else "requested",
-        approved_at=datetime.now(timezone.utc) if direct else None,
-        approved_by=user.id if direct else None,
+        status="auto_approved",
+        approved_at=datetime.now(timezone.utc),
+        approved_by=user.id,  # friend approves their own add
     )
     session.add(add)
     await session.flush()
-    if direct:
-        bg.add_task(_do_add, req.track_id, user.id, user.role)
+    bg.add_task(_do_add, req.track_id, user.id, user.role)
     return LibraryAddOut(track_id=req.track_id, status=add.status)
 
 
@@ -133,16 +138,7 @@ async def approve_request(
     user: CurrentUser = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
-    if user.role != "owner":
-        raise HTTPException(403, "owner only")
-    add = await session.get(LibraryAdd, add_id)
-    if not add:
-        raise HTTPException(404, "not found")
-    add.status = "adding"
-    add.approved_at = datetime.now(timezone.utc)
-    add.approved_by = user.id
-    bg.add_task(_do_add, add.track_id, add.user_id, "owner")
-    return {"status": "approved"}
+    raise HTTPException(410, "approval gate removed; all adds are auto-approved")
 
 
 @router.post("/requests/{add_id}/deny")
@@ -152,14 +148,7 @@ async def deny_request(
     user: CurrentUser = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
-    if user.role != "owner":
-        raise HTTPException(403, "owner only")
-    add = await session.get(LibraryAdd, add_id)
-    if not add:
-        raise HTTPException(404, "not found")
-    add.status = "denied"
-    add.denial_reason = (payload or {}).get("reason")
-    return {"status": "denied"}
+    raise HTTPException(410, "approval gate removed; all adds are auto-approved")
 
 
 # ---------- background worker ----------

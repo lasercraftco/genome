@@ -34,7 +34,7 @@ export const users = pgTable(
     role: varchar("role", { length: 20 }).notNull().default("friend"), // owner | trusted | friend | guest
     banned: boolean("banned").notNull().default(false),
     autoApprove: boolean("auto_approve").notNull().default(false),
-    dailyAddQuota: integer("daily_add_quota").notNull().default(5),
+    dailyAddQuota: integer("daily_add_quota").notNull().default(10),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
     onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
