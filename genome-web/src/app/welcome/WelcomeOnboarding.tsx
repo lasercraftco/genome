@@ -22,6 +22,7 @@ interface Artist {
 interface WelcomeOnboardingProps {
   userId: string;
   email: string;
+  displayName?: string;
 }
 
 export function WelcomeOnboarding({ userId, email }: WelcomeOnboardingProps) {

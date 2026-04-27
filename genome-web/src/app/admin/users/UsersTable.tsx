@@ -60,7 +60,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-2">
-              <th className="text-left py-3 px-4 font-semibold text-text-dim">Email</th>
+              <th className="text-left py-3 px-4 font-semibold text-text-dim">User</th>
               <th className="text-left py-3 px-4 font-semibold text-text-dim">Role</th>
               <th className="text-left py-3 px-4 font-semibold text-text-dim">Auto Approve</th>
               <th className="text-left py-3 px-4 font-semibold text-text-dim">Quota</th>
@@ -71,7 +71,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
           <tbody>
             {users.map((user) => (
               <tr key={user.id} className="border-b border-surface-2 hover:bg-surface/30">
-                <td className="py-3 px-4 text-text">{user.email}</td>
+                <td className="py-3 px-4 text-text">{user.displayName ?? user.username ?? user.email ?? user.id.slice(0,8)}</td>
                 <td className="py-3 px-4">
                   <select
                     value={user.role}

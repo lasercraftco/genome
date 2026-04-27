@@ -5,6 +5,10 @@
  *
  * Multi-user model: stations / station_tracks / feedback / library_adds
  * all carry a user_id. The `tracks` catalog is global (deduped across users).
+ *
+ * Auth model (2026-04 refactor): first-name sign-in, no email/magic-link.
+ * `username` is the slugified first name; same name across all tyflix apps
+ * resolves to the same user. JWT cookie at .tyflix.net.
  */
 
 import { sql } from "drizzle-orm";
@@ -28,7 +32,11 @@ export const users = pgTable(
   "users",
   {
     id: varchar("id", { length: 40 }).primaryKey().default(sql`gen_random_uuid()::text`),
-    email: varchar("email", { length: 320 }).notNull(),
+    username: varchar("username", { length: 50 }).notNull(),
+    displayName: varchar("display_name", { length: 200 }),
+    isOwner: boolean("is_owner").notNull().default(false),
+    // email kept nullable for backward-compat with pre-refactor rows
+    email: varchar("email", { length: 320 }),
     name: varchar("name", { length: 200 }),
     avatarUrl: varchar("avatar_url", { length: 800 }),
     role: varchar("role", { length: 20 }).notNull().default("friend"), // owner | trusted | friend | guest
@@ -40,37 +48,10 @@ export const users = pgTable(
     onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
     settings: jsonb("settings").$type<Record<string, unknown>>().notNull().default({}),
   },
-  (t) => [uniqueIndex("uq_users_email").on(t.email)],
-);
-
-// Magic-link tokens (single-use, 15 min TTL)
-export const magicTokens = pgTable(
-  "magic_tokens",
-  {
-    id: serial("id").primaryKey(),
-    email: varchar("email", { length: 320 }).notNull(),
-    token: varchar("token", { length: 80 }).notNull().unique(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    consumedAt: timestamp("consumed_at", { withTimezone: true }),
-  },
-  (t) => [index("idx_magic_email").on(t.email)],
-);
-
-// Long-lived session cookies (90 days)
-export const sessions = pgTable(
-  "sessions",
-  {
-    id: varchar("id", { length: 80 }).primaryKey(), // opaque cookie value
-    userId: varchar("user_id", { length: 40 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    userAgent: varchar("user_agent", { length: 500 }),
-    ip: varchar("ip", { length: 64 }),
-  },
-  (t) => [index("idx_sessions_user").on(t.userId)],
+  (t) => [
+    uniqueIndex("uq_users_username").on(t.username),
+    index("idx_users_email").on(t.email),
+  ],
 );
 
 // Audit log for sensitive actions
@@ -217,8 +198,6 @@ export const libraryAdds = pgTable(
 );
 
 export type User = typeof users.$inferSelect;
-export type Session = typeof sessions.$inferSelect;
-export type MagicToken = typeof magicTokens.$inferSelect;
 export type Station = typeof stations.$inferSelect;
 export type NewStation = typeof stations.$inferInsert;
 export type Track = typeof tracks.$inferSelect;

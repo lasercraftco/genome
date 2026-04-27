@@ -10,5 +10,5 @@ export default async function WelcomePage() {
     redirect("/home");
   }
 
-  return <WelcomeOnboarding userId={u.id} email={u.email} />;
+  return <WelcomeOnboarding userId={u.id} email={u.email ?? ""} displayName={u.displayName ?? u.username} />;
 }

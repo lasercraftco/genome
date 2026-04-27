@@ -1,28 +1,28 @@
 import { createHash } from "crypto";
 import { getUser } from "@/lib/auth/session";
-import { isOwner } from "@/lib/auth/session";
 import { UserMenuContent } from "./UserMenuContent";
 
 export async function UserMenu() {
   const u = await getUser();
   if (!u) return null;
 
-  // Generate gravatar URL
-  const hash = createHash("md5").update(u.email.toLowerCase()).digest("hex");
+  const display = u.displayName || u.username || u.email?.split("@")[0] || "friend";
+  // Gravatar still works — hash whatever stable identifier we have
+  const hashSrc = (u.email ?? u.username ?? u.id).toLowerCase();
+  const hash = createHash("md5").update(hashSrc).digest("hex");
   const gravatarUrl = `https://www.gravatar.com/avatar/${hash}?s=80&d=mp`;
 
-  // Get initials
-  const initials = u.email
-    .split("@")[0]
-    .split(/[._-]/)
+  const initials = display
+    .split(/[._\s-]/)
+    .filter(Boolean)
     .map((part) => part[0])
     .join("")
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || display.slice(0, 2).toUpperCase();
 
   return (
     <UserMenuContent
-      email={u.email}
+      email={display}
       gravatarUrl={gravatarUrl}
       initials={initials}
       role={u.role}

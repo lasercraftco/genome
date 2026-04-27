@@ -21,7 +21,7 @@ export default async function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Account</CardTitle>
-            <CardDescription>Signed in as {u.email}</CardDescription>
+            <CardDescription>Signed in as {u.displayName ?? u.username}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-sm">

@@ -26,7 +26,7 @@ export default async function HomePage() {
           <div>
             <p className="text-sm text-text-faint">{greeting}</p>
             <h1 className="text-3xl md:text-4xl font-display text-text">
-              What do you want to hear, {user.name?.split(" ")[0] ?? user.email.split("@")[0]}?
+              What do you want to hear, {user.displayName ?? user.username}?
             </h1>
           </div>
         </header>

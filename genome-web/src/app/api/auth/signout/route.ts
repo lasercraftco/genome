@@ -1,15 +1,19 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
-import { db } from "@/lib/db";
-import { sessions } from "@/lib/db/schema";
-import { COOKIE_NAME, clearSessionCookie } from "@/lib/auth/session";
+import { COOKIE_DOMAIN, COOKIE_NAME } from "@/lib/auth/session";
 
-export async function POST() {
-  const c = await cookies();
-  const sid = c.get(COOKIE_NAME)?.value;
-  if (sid) await db.delete(sessions).where(eq(sessions.id, sid));
-  await clearSessionCookie();
-  return new Response(null, { status: 303, headers: { Location: "/" } });
+export async function POST(req: Request): Promise<Response> {
+  const res = NextResponse.redirect(new URL("/", req.url), 303);
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookies.set({
+    name: COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isProd,
+    domain: isProd ? COOKIE_DOMAIN : undefined,
+    path: "/",
+    maxAge: 0,
+  });
+  return res;
 }

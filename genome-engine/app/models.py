@@ -24,13 +24,16 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=_uuid)
-    email: Mapped[str] = mapped_column(String(320), unique=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True)
+    display_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    is_owner: Mapped[bool] = mapped_column(Boolean, default=False)
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(800), nullable=True)
     role: Mapped[str] = mapped_column(String(20), default="friend")
     banned: Mapped[bool] = mapped_column(Boolean, default=False)
     auto_approve: Mapped[bool] = mapped_column(Boolean, default=False)
-    daily_add_quota: Mapped[int] = mapped_column(Integer, default=5)
+    daily_add_quota: Mapped[int] = mapped_column(Integer, default=10)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     onboarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

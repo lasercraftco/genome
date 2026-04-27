@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 
 interface LibraryAuditEntry {
   id: number;
-  userEmail: string;
+  userEmail: string | null;
+  userLabel: string;
   trackTitle: string;
   trackArtist: string;
   status: string;
@@ -25,6 +26,8 @@ export default async function AdminAuditPage() {
       .select({
         id: libraryAdds.id,
         userEmail: users.email,
+        userUsername: users.username,
+        userDisplay: users.displayName,
         trackTitle: tracks.title,
         trackArtist: tracks.artist,
         status: libraryAdds.status,
@@ -40,6 +43,7 @@ export default async function AdminAuditPage() {
     entries = rows.map(r => ({
       id: r.id,
       userEmail: r.userEmail,
+      userLabel: (r.userDisplay ?? r.userUsername ?? r.userEmail ?? "unknown"),
       trackTitle: r.trackTitle,
       trackArtist: r.trackArtist,
       status: r.status,
@@ -77,7 +81,7 @@ export default async function AdminAuditPage() {
                       <span className="text-sm font-medium text-text">{entry.trackTitle}</span>
                       <span className="text-xs text-text-dim">by {entry.trackArtist}</span>
                     </div>
-                    <div className="text-xs text-text-dim">{entry.userEmail}</div>
+                    <div className="text-xs text-text-dim">{entry.userLabel}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={STATUS_BADGE_COLOR[entry.status] as any ?? "secondary"}>

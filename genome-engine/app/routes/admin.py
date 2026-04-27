@@ -44,6 +44,9 @@ async def list_users(
             {
                 "id": u.id,
                 "email": u.email,
+                "username": u.username,
+                "display_name": u.display_name,
+                "is_owner": u.is_owner,
                 "name": u.name,
                 "role": u.role,
                 "banned": u.banned,
