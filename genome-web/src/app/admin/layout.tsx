@@ -29,16 +29,16 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
                 <span className="hidden sm:inline">Users</span>
               </button>
             </Link>
-            <Link href="/admin/requests">
-              <button className="flex items-center gap-2 px-4 py-2 border-b-2 border-transparent text-text-dim hover:text-text hover:border-primary transition-colors">
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Requests</span>
-              </button>
-            </Link>
             <Link href="/admin/audit">
               <button className="flex items-center gap-2 px-4 py-2 border-b-2 border-transparent text-text-dim hover:text-text hover:border-primary transition-colors">
-                <AlertCircle className="h-4 w-4" />
+                <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Audit</span>
+              </button>
+            </Link>
+            <Link href="/admin/quotas">
+              <button className="flex items-center gap-2 px-4 py-2 border-b-2 border-transparent text-text-dim hover:text-text hover:border-primary transition-colors">
+                <AlertCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Quotas</span>
               </button>
             </Link>
             <Link href="/admin/settings">
